@@ -44,7 +44,7 @@ with open ("config.yaml", "r+") as config_file:
 	if args.update_device_token:
 		if not args.bundle in [entry["name"] for entry in loaded_file]:
 			sys.exit("Bundle ID not found in config.yaml")
-		
+
 		try:
 			updated_config = yaml.safe_dump_all(loaded_file)
 			config_file.seek(0)
@@ -64,17 +64,24 @@ sound = "default"
 badge = 0
 gameID = None
 
-if args.title:
-	title = args.title
-if args.body:
-	body = args.body
-if args.badge:
-	badge = args.badge
-if args.no_sound:
-	sound = None
+if args.background:
+	data = {
+		"Size" : 96.0
+	}
+	payload = Payload(content_available=True, custom=data)
+else:
+	if args.title:
+		title = args.title
+	if args.body:
+		body = args.body
+	if args.badge:
+		badge = args.badge
+	if args.no_sound:
+		sound = None
+	alert = PayloadAlert(title=title, body=body)
+	payload = Payload(alert=alert, sound=sound, badge=badge)
 
-alert = PayloadAlert(title=title, body=body)
-payload = Payload(alert=alert, sound=sound, badge=badge)
+print("Sending APNS payload", payload.dict(), "to", device_token)
 
 # Create session and post notification
 if args.token:
