@@ -1,4 +1,4 @@
-# python-apnsTester
+# python-apns_tester
 Python script for sending notifications via APNS
 
 ### Dependencies
