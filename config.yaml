@@ -1,5 +1,15 @@
 ---
- team-id: 1234567890
- auth-key: 1234567890
- auth-key-filename: AuthKey.p8
- cert-filename: APNS-certificate.pem
+auth-key: 1234567890
+auth-key-filename: MyApp1.p8
+cert-filename: MyApp1.pem
+device-token: 035fdd1ae7b596823f7ed17c0bce23dbff3616e018b1c8ac054ce2902c65e158
+name: com.domain.MyApp1
+team-id: 1234567890
+---
+auth-key: 1234567890
+auth-key-filename: MyApp2.p8
+cert-filename: MyApp2.pem
+device-token: 035fdd1ae7b596823f7ed17c0bce23dbff3616e018b1c8ac054ce2902c65e158
+name: com.domain.MyApp2
+team-id: 1234567890
+...
