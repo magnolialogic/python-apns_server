@@ -1,0 +1,5 @@
+---
+ team-id: 1234567890
+ auth-key: 1234567890
+ auth-key-filename: AuthKey.p8
+ cert-filename: APNS-certificate.pem
