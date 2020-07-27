@@ -1,4 +1,4 @@
 ---
-cert-file: /path/to/fullchain.pem
-key-file: /path/to/privkey.pem
+cert-path: /path/to/fullchain.pem
+key-path: /path/to/privkey.pem
 ...
