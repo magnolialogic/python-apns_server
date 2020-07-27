@@ -1,10 +1,17 @@
-# python-apns_tester
-Python script for sending notifications via APNS
+# python-apns_server
+Python server-side tools for managing APNS device tokens and generating test notifications
 
-### Dependencies
+## Dependencies
 [PyAPNs2](https://github.com/Pr0Ger/PyAPNs2)
+[flask](https://pypi.org/project/Flask/)
+[flask_restful](https://pypi.org/project/Flask-RESTful/)
 
-### Usage
+## Usage
+#### device_token_api.py
+python + Flask micro RESTful API for receiving and storing APNS tokens from your iOS apps. Use [certbot](https://certbot.eff.org/) to generate SSL certificate + key files and update `token_server_config.yaml` with their paths.
+
+#### apns_tester.py
+Use to send test notifications to your iOS app via APNS
 ```
 usage: apns_tester.py [-h] (-p | -d | --update-device-token UPDATE_DEVICE_TOKEN) [--token]
                       [--title TITLE] [--body BODY] [--badge BADGE] [--no_sound] [--background] --bundle
