@@ -19,10 +19,10 @@ $ sudo systemctl enable token_server
 $ sudo systemctl start token_server
 ```
 
-#### apns_tester.py
+#### apns_send.py
 Use to send test notifications to your iOS app via APNS
 ```
-usage: apns_tester.py [-h] (-p | -d | --update-device-token UPDATE_DEVICE_TOKEN) [--token]
+usage: apns_send.py [-h] (-p | -d | --update-device-token UPDATE_DEVICE_TOKEN) [--token]
                       [--title TITLE] [--body BODY] [--badge BADGE] [--no_sound] [--background] --bundle
                       BUNDLE
 
