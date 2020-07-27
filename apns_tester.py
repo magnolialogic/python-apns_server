@@ -24,7 +24,7 @@ parser.add_argument("--bundle", required=True, help="App Bundle ID")
 args = parser.parse_args()
 
 # Get certs and identifiers from config.yaml
-with open ("config.yaml", "r+") as config_file:
+with open ("apns_tester_config.yaml", "r+") as config_file:
 	try:
 		loaded_file = list(yaml.safe_load_all(config_file))
 	except yaml.YAMLError:
