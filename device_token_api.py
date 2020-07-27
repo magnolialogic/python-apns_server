@@ -38,7 +38,7 @@ def write_yaml(tokens):
 		except yaml.YAMLError:
 			sys.exit(yaml.YAMLError)
 
-def log_change(message):
+def log_event(message):
 	with open(os.path.join(script_home, "token_server.log"), "a") as log_file:
 		log_file.write("{timestamp}: {message}\n".format(timestamp=datetime.now().strftime("%m/%d/%Y %H:%M:%S"), message=message))
 
@@ -46,10 +46,10 @@ class Token(Resource):
 	def get(self, token):
 		for entry in tokens:
 			if (token == entry["deviceToken"]):
-				log_change("GET /token/{request} -> 200 Success {result}".format(request=token, result=entry))
+				log_event("GET /token/{request} -> 200 Success {result}".format(request=token, result=entry))
 				return entry, 200
 
-		log_change("GET /token/{request} -> 404 NotFound".format(request=token))
+		log_event("GET /token/{request} -> 404 NotFound".format(request=token))
 		return "Token not found", 404
 
 	def post(self, token):
@@ -60,7 +60,7 @@ class Token(Resource):
 
 		for entry in tokens:
 			if (token == entry["deviceToken"]):
-				log_change("POST /token/{request} -> 400 AlreadyExists {result}".format(request=token, result=entry))
+				log_event("POST /token/{request} -> 400 AlreadyExists {result}".format(request=token, result=entry))
 				return "User with token {token} already exists".format(token=token), 400
 
 		new_token = {
@@ -69,7 +69,7 @@ class Token(Resource):
 			"deviceToken": token
 		}
 
-		log_change("POST /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
+		log_event("POST /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
 		tokens.append(new_token)
 		write_yaml(tokens)
 		return token, 201
@@ -84,7 +84,7 @@ class Token(Resource):
 			if (token == entry["deviceToken"]):
 				entry["name"] = args["name"]
 				entry["bundleID"] = args["bundleID"]
-				log_change("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
+				log_event("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
 				write_yaml(tokens)
 				return entry, 200
 
@@ -94,21 +94,21 @@ class Token(Resource):
 			"deviceToken": token
 		}
 
-		log_change("PUT /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
+		log_event("PUT /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
 		tokens.append(new_token)
 		write_yaml(tokens)
 		return token, 201
 
 	def delete(self, token):
 		global tokens
-		log_change("DELETE /token/{request} -> 200 Success".format(request=token))
+		log_event("DELETE /token/{request} -> 200 Success".format(request=token))
 		tokens = [entry for entry in tokens if entry["deviceToken"] != token]
 		write_yaml(tokens)
 		return "{token} has been deleted".format(token=token), 200
 
 class Tokens(Resource):
 	def get(self):
-		log_change("GET /tokens -> 200 Success {result}".format(result=tokens))
+		log_event("GET /tokens -> 200 Success {result}".format(result=tokens))
 		return tokens, 200
 
 if __name__ == "__main__":
