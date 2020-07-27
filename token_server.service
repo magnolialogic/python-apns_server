@@ -1,0 +1,14 @@
+[Unit]
+Description=Development APNS token management microservice
+After=time-sync.target
+Requires=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Restart=always
+ExecStart=/root/apns/device_token_api.py
+
+[Install]
+WantedBy=multi-user.target
