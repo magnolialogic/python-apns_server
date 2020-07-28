@@ -10,7 +10,7 @@ Python server-side tools for managing APNS device tokens and generating test not
 
 ## Usage
 #### device_token_api.py
-python + Flask micro RESTful API for receiving and storing APNS tokens from your iOS apps. Use [certbot](https://certbot.eff.org/) to generate SSL certificate + key files and update `token_server_config.yaml` with their paths.
+python + Flask micro RESTful API for receiving and storing APNS tokens from your iOS apps. Use [certbot](https://certbot.eff.org/) to generate SSL certificate + key files and update `ssl.yaml` with their paths.
 
 To run as a system service:
 ```
