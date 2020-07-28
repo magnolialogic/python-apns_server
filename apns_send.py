@@ -18,9 +18,9 @@ parser.add_argument("--background", type=yaml.safe_load, required=False, help="D
 args = parser.parse_args()
 
 # Get config data and enrolled tokens from YAML files
-with open ("apns_send_config.yaml") as config_file:
+with open ("app.yaml") as app_file:
 	try:
-		loaded_config = yaml.safe_load(config_file)
+		loaded_app = yaml.safe_load(app_file)
 	except yaml.YAMLError:
 		sys.exit(yaml.YAMLError)
 
@@ -31,11 +31,11 @@ with open ("tokens.yaml") as token_file:
 		sys.exit(yaml.YAMLError)
 
 # Assign loaded .yaml data to constants
-auth_key = loaded_config["auth-key"]
-auth_key_filename = loaded_config["auth-key-filename"]
-bundle_id = loaded_config["bundle-id"]
-cert_filename = loaded_config["cert-filename"]
-team_id = loaded_config["team-id"]
+auth_key = loaded_app["auth-key"]
+auth_key_filename = loaded_app["auth-key-filename"]
+bundle_id = loaded_app["bundle-id"]
+cert_filename = loaded_app["cert-filename"]
+team_id = loaded_app["team-id"]
 token_audience = [target["device-token"] for target in loaded_tokens if target["bundle-id"] == bundle_id]
 
 # Configure notification payload
