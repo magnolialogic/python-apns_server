@@ -18,7 +18,7 @@ parser.add_argument("--background", type=yaml.safe_load, required=False, help="D
 args = parser.parse_args()
 
 # Get config data and enrolled tokens from YAML files
-with open ("apns_send_config.yaml", "r+") as config_file:
+with open ("apns_send_config.yaml") as config_file:
 	try:
 		loaded_config = yaml.safe_load(config_file)
 	except yaml.YAMLError:
