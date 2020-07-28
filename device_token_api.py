@@ -42,6 +42,16 @@ def log_event(message):
 	with open(os.path.join(script_home, "token_server.log"), "a") as log_file:
 		log_file.write("{timestamp}: {message}\n".format(timestamp=datetime.now().strftime("%m/%d/%Y %H:%M:%S"), message=message))
 
+def valid_data(data):
+	expected_keys = ["bundleID", "deviceToken", "name"]
+	if sorted(expected_keys) == sorted(list(data.keys())):
+		for value in data.values():
+			if value in ["", None]:
+				return False
+		return True
+	else:
+		return False
+
 class Token(Resource):
 	def get(self, token):
 		for entry in tokens:
@@ -58,21 +68,26 @@ class Token(Resource):
 		parser.add_argument("bundleID")
 		args = parser.parse_args()
 
-		for entry in tokens:
-			if (token == entry["deviceToken"]):
-				log_event("POST /token/{request} -> 400 AlreadyExists {result}".format(request=token, result=entry))
-				return "User with token {token} already exists".format(token=token), 400
-
 		new_token = {
 			"name": args["name"],
 			"bundleID": args["bundleID"],
 			"deviceToken": token
 		}
 
-		log_event("POST /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
-		tokens.append(new_token)
-		write_yaml(tokens)
-		return token, 201
+		if valid_data(new_token):
+			for entry in tokens:
+				if (token == entry["deviceToken"]):
+					log_event("POST /token/{request} -> 409 AlreadyExists {result}".format(request=token, result=entry))
+					return "User with token {token} already exists".format(token=token), 409
+
+			log_event("POST /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
+			tokens.append(new_token)
+			write_yaml(tokens)
+			return token, 201
+		else:
+			log_event("POST /token/{request} -> 400 Bad Request {result}".format(request=token, result=new_token))
+			return new_token, 400
+
 
 	def put(self, token):
 		parser = reqparse.RequestParser()
@@ -80,24 +95,32 @@ class Token(Resource):
 		parser.add_argument("bundleID")
 		args = parser.parse_args()
 
-		for entry in tokens:
-			if (token == entry["deviceToken"]):
-				entry["name"] = args["name"]
-				entry["bundleID"] = args["bundleID"]
-				log_event("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
-				write_yaml(tokens)
-				return entry, 200
-
 		new_token = {
 			"name": args["name"],
 			"bundleID": args["bundleID"],
 			"deviceToken": token
 		}
 
-		log_event("PUT /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
-		tokens.append(new_token)
-		write_yaml(tokens)
-		return token, 201
+		if valid_data(new_token):
+			for entry in tokens:
+				if (token == entry["deviceToken"]):
+					if entry["name"] == args["name"] and entry["bundleID"] == args["bundleID"]:
+						log_event("PUT /token/{request} -> 409 AlreadyExists {result}".format(request=token, result=entry))
+						return entry, 409
+					else:
+						entry["name"] = args["name"]
+						entry["bundleID"] = args["bundleID"]
+						log_event("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
+						write_yaml(tokens)
+						return entry, 200
+
+			log_event("PUT /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
+			tokens.append(new_token)
+			write_yaml(tokens)
+			return token, 201
+		else:
+			log_event("PUT /token/{request} -> 400 Bad Request {result}".format(request=token, result=new_token))
+			return new_token, 400
 
 	def delete(self, token):
 		global tokens
