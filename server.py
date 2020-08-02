@@ -13,13 +13,18 @@ parser.add_argument("--debug", action="store_true", help="Run Flask app in debug
 args = parser.parse_args()
 
 script_home = os.path.dirname(os.path.realpath(__file__))
-token_filename= "tokens.yaml"
+token_filename = "tokens.yaml"
+token_file_mode = "r" if os.path.exists(token_filename) else "w"
 
-with open(os.path.join(script_home, token_filename)) as token_file:
-	try:
-		tokens = list(yaml.safe_load_all(token_file))
-	except yaml.YAMLError:
-		sys.exit(yaml.YAMLError)
+with open(os.path.join(script_home, token_filename), token_file_mode) as token_file:
+	if token_file_mode == "r":
+		try:
+			tokens = list(yaml.safe_load_all(token_file))
+		except yaml.YAMLError:
+			sys.exit(yaml.YAMLError)
+	else:
+		token_file.write("---\n")
+		token_file.write("...")
 
 with open(os.path.join(script_home, "ssl.yaml")) as ssl_file:
 	try:
