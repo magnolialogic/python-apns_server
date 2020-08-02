@@ -1,3 +1,4 @@
+*.yaml
 *.bak
 *.log
 *.p8
