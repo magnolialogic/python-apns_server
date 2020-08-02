@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from apns_session import Session
 import argparse
 from datetime import datetime
 from flask import Flask
@@ -147,4 +148,5 @@ if __name__ == "__main__":
 	api = Api(app)
 	api.add_resource(Token, "/token/<string:token>")
 	api.add_resource(Tokens, "/tokens")
+	api.add_resource(Push, "/push/<string:topic>")
 	app.run(ssl_context=(ssl_settings["cert-path"], ssl_settings["key-path"]), debug=args.debug)
