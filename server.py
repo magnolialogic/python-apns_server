@@ -143,6 +143,13 @@ class Tokens(Resource):
 		log_event("GET /tokens -> 200 Success {result}".format(result=tokens))
 		return tokens, 200
 
+class Push(Resource):
+	def push(self):
+		pass
+
+	def delete(self):
+		pass
+
 if __name__ == "__main__":
 	app = Flask(__name__)
 	api = Api(app)
