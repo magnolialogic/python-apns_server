@@ -9,7 +9,7 @@ User=root
 Group=root
 Restart=always
 Environment="FLASK_ENV=development"
-ExecStart=/root/apns/device_token_api.py
+ExecStart=/root/apns/server.py
 
 [Install]
 WantedBy=multi-user.target

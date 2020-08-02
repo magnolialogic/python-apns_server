@@ -39,7 +39,7 @@ def write_yaml(tokens):
 			sys.exit(yaml.YAMLError)
 
 def log_event(message):
-	with open(os.path.join(script_home, "token_server.log"), "a") as log_file:
+	with open(os.path.join(script_home, "apns_server.log"), "a") as log_file:
 		log_file.write("{timestamp}: {message}\n".format(timestamp=datetime.now().strftime("%m/%d/%Y %H:%M:%S"), message=message))
 
 def valid_data(data):
