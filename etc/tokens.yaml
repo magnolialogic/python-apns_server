@@ -1,9 +1,0 @@
----
-bundle-id: com.example.MyApp
-device-token: fcc37fb74f2506277739c1e343c535f131447327105e23ad2a0cecf33b5b5530
-name: Example User 1
----
-bundle-id: com.example.MyApp
-device-token: 0dd1774c64ded25910e11cc98552b0465563aa3b586ea51b7feaceea077b50fb
-name: Example User 2
-...
