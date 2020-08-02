@@ -47,7 +47,7 @@ class Session:
 
 		# Create payload based on notification type
 		if self.background:
-			data = self.background
+			data = {"Data": self.background}
 			payload = Payload(content_available=True, custom=data)
 		else:
 			alert = PayloadAlert(title=self.title, body=self.body)
