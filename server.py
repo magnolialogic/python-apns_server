@@ -15,11 +15,13 @@ args = parser.parse_args()
 script_home = os.path.dirname(os.path.realpath(__file__))
 token_filename = "tokens.yaml"
 token_file_mode = "r" if os.path.exists(token_filename) else "w"
+tokens = []
 
 with open(os.path.join(script_home, token_filename), token_file_mode) as token_file:
 	if token_file_mode == "r":
 		try:
 			tokens = list(yaml.safe_load_all(token_file))
+			tokens = [token for token in tokens if not token == None]
 		except yaml.YAMLError:
 			sys.exit(yaml.YAMLError)
 	else:
@@ -69,8 +71,8 @@ class Token(Resource):
 
 	def post(self, token):
 		parser = reqparse.RequestParser()
-		parser.add_argument("name")
-		parser.add_argument("bundle-id")
+		parser.add_argument("name", type=str)
+		parser.add_argument("bundle-id", type=str)
 		args = parser.parse_args()
 
 		new_token = {
@@ -96,8 +98,8 @@ class Token(Resource):
 
 	def put(self, token):
 		parser = reqparse.RequestParser()
-		parser.add_argument("name")
-		parser.add_argument("bundle-id")
+		parser.add_argument("name", type=str)
+		parser.add_argument("bundle-id", type=str)
 		args = parser.parse_args()
 
 		new_token = {
@@ -107,17 +109,18 @@ class Token(Resource):
 		}
 
 		if valid_data(new_token):
-			for entry in tokens:
-				if (token == entry["device-token"]):
-					if entry["name"] == args["name"] and entry["bundle-id"] == args["bundle-id"]:
-						log_event("PUT /token/{request} -> 409 AlreadyExists {result}".format(request=token, result=entry))
-						return entry, 409
-					else:
-						entry["name"] = args["name"]
-						entry["bundle-id"] = args["bundle-id"]
-						log_event("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
-						write_yaml(tokens)
-						return entry, 200
+			if tokens:
+				for entry in tokens:
+					if (token == entry["device-token"]):
+						if entry["name"] == args["name"] and entry["bundle-id"] == args["bundle-id"]:
+							log_event("PUT /token/{request} -> 409 AlreadyExists {result}".format(request=token, result=entry))
+							return entry, 409
+						else:
+							entry["name"] = args["name"]
+							entry["bundle-id"] = args["bundle-id"]
+							log_event("PUT /token/{request} -> 200 Success {result}".format(request=token, result=entry))
+							write_yaml(tokens)
+							return entry, 200
 
 			log_event("PUT /token/{request} -> 201 Created {result}".format(request=token, result=new_token))
 			tokens.append(new_token)
