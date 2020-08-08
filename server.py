@@ -21,10 +21,10 @@ users_file_mode = "r" if os.path.exists(users_filename) else "w"
 users = []
 
 user_fields = {
-	"bundleID": fields.String,
+	"bundle-id": fields.String,
 	"device-token": fields.List(fields.String),
 	"name": fields.String,
-	"userID": fields.String
+	"user-id": fields.String
 }
 
 # Read YAML config files
@@ -83,17 +83,17 @@ class Tokens(Resource):
 	GET-ONLY
 	"""
 	def get(self):
-		tokens = []
+		all_tokens = []
 		for entry in users:
-			tokens.append(entry["device-token"])
-		log_event("GET /tokens -> 200 Success {result}".format(result=tokens))
-		return tokens, 200
+			all_tokens.append(entry["device-token"])
+		log_event("GET /tokens -> 200 Success")
+		return all_tokens, 200
 
 class TokensForUser(Resource):
 	"""
 	Returns all DeviceTokens for a given UserID
-	GET ONLY
 	/user/<string_user_id>/tokens
+	GET ONLY
 	"""
 	def get(self, user_id):
 		for entry in users:
@@ -228,10 +228,15 @@ class User(Resource):
 class Users(Resource):
 	"""
 	Returns UserIDs for all Users
+	/users
 	GET ONLY
 	"""
 	def get(self):
-		return users, 200
+		all_users = []
+		for entry in users:
+			all_users.append(entry["user-id"])
+			log_event("GET /users -> 200 Success")
+		return all_users, 200
 
 # Do The Thing
 
