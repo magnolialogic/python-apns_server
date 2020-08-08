@@ -59,3 +59,6 @@ class Session:
 		for target in token_audience:
 			print("Sending APNS payload", payload.dict(), "to", target)
 			client.send_notification(token_hex=target, notification=payload, topic=bundle_id)
+
+if __name__ == "__main__":
+	sys.exit("I am a module, not a script.")
