@@ -218,6 +218,9 @@ class UserByID(Resource):
 				log_event("PUT /user/{request} -> 200 Success".format(request=user_id))
 				return "User {user_id} updated".format(user_id=user_id), 200
 			else:
+				db.session.add(User(id=user_id, name=args["name"]))
+				db.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db.session.commit()
 				log_event("PUT /user/{request} -> 201 Created".format(request=user_id))
 				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
