@@ -312,7 +312,8 @@ class SessionTable(db.Model):
 if __name__ == "__main__":
 	db.mapper(SessionRelationship, session_relationship_table)
 	api = Api(app)
-	api_root = "/" + api_version
+	api_root = "/v" + api_version
+	print(api_root)
 	api.add_resource(AllTokenIDs, api_root + "/tokens")
 	api.add_resource(AllTokensForBundleID, api_root + "/tokens/<string:bundle_id>")
 	api.add_resource(AllTokensForUserID, api_root + "/user/<string:user_id>/tokens")
