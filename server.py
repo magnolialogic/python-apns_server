@@ -80,7 +80,7 @@ class AllTokensForBundleID(Resource):
 	"""
 	def get(self, bundle_id):
 		tokens = [token.id for token in TokenTable.query.filter_by(bundle_id=bundle_id).all()]
-		log_event("GET /tokens/{bundle_id} -> 200 Success")
+		log_event("GET /tokens/{bundle_id} -> 200 Success".format(bundle_id=bundle_id))
 		return tokens, 200
 
 class AllTokensForUserID(Resource):
@@ -93,7 +93,7 @@ class AllTokensForUserID(Resource):
 		user_record = UserTable.query.filter_by(id=user_id).first()
 		if user_record:
 			tokens = [token.id for token in user_record.tokens]
-			log_event("GET /user/{user}/token -> 200 Success".format(user=user_id))
+			log_event("GET /user/{user}/tokens -> 200 Success".format(user=user_id))
 			return tokens, 200
 		else:
 			return "User {user_id} does not exist".format(user_id=user_id), 404
@@ -117,7 +117,7 @@ class AllUsersForBundleID(Resource):
 	"""
 	def get(self, bundle_id):
 		all_users = list(dict.fromkeys([token.user_id for token in TokenTable.query.filter_by(bundle_id=bundle_id) if token.bundle_id == bundle_id]))
-		log_event("GET /users/{bundle_id} -> 200 Success")
+		log_event("GET /users/{bundle_id} -> 200 Success".format(bundle_id=bundle_id))
 		return all_users, 200
 
 class TokenByID(Resource):
