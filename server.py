@@ -12,7 +12,7 @@ import yaml
 
 # Constants
 
-api_version = "/v1/"
+api_version = "1"
 script_home = os.path.dirname(os.path.realpath(__file__))
 
 # Parse command-line arguments
@@ -312,11 +312,12 @@ class SessionTable(db.Model):
 if __name__ == "__main__":
 	db.mapper(SessionRelationship, session_relationship_table)
 	api = Api(app)
-	api.add_resource(AllTokenIDs, api_version + "/tokens")
-	api.add_resource(AllTokensForBundleID, api_version + "/tokens/<string:bundle_id>")
-	api.add_resource(AllTokensForUserID, api_version + "/user/<string:user_id>/tokens")
-	api.add_resource(AllUserIDs, api_version + "/users")
-	api.add_resource(AllUsersForBundleID, api_version + "/users/<string:bundle_id>")
-	api.add_resource(TokenByID, api_version + "/token/<string:token_id>")
-	api.add_resource(UserByID, api_version + "/user/<string:user_id>")
+	api_root = "/" + api_version
+	api.add_resource(AllTokenIDs, api_root + "/tokens")
+	api.add_resource(AllTokensForBundleID, api_root + "/tokens/<string:bundle_id>")
+	api.add_resource(AllTokensForUserID, api_root + "/user/<string:user_id>/tokens")
+	api.add_resource(AllUserIDs, api_root + "/users")
+	api.add_resource(AllUsersForBundleID, api_root + "/users/<string:bundle_id>")
+	api.add_resource(TokenByID, api_root + "/token/<string:token_id>")
+	api.add_resource(UserByID, api_root + "/user/<string:user_id>")
 	app.run(ssl_context=(config["cert-path"], config["key-path"]), debug=args.debug)
