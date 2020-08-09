@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from apns_session import Session
+from apns_session import PushSession
 import argparse
 import sys
 import yaml
@@ -18,5 +18,5 @@ parser.add_argument("--yaml", action="store_true", help="Use DeviceTokens from t
 args = parser.parse_args()
 
 # Generates a test notification which is by default only a sound
-session = Session(background=args.background, title=args.title, body=args.body, badge=args.badge, silent=args.silent, dev=args.prod, yaml_tokens=args.yaml)
+session = PushSession(background=args.background, title=args.title, body=args.body, badge=args.badge, silent=args.silent, dev=args.prod, yaml_tokens=args.yaml)
 session.send()

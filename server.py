@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from apns_session import Session
+from apns_session import PushSession
 import argparse
 from datetime import datetime
 from flask import Flask
@@ -70,7 +70,7 @@ class AllTokenIDs(Resource):
 	GET-ONLY
 	"""
 	def get(self):
-		tokens = [token.id for token in TokenTable.query.all()]
+		tokens = [token.id for token in Token.query.all()]
 		log_event("GET /tokens -> 200 Success")
 		return tokens, 200
 
@@ -81,7 +81,7 @@ class AllTokensForBundleID(Resource):
 	GET-ONLY
 	"""
 	def get(self, bundle_id):
-		tokens = [token.id for token in TokenTable.query.filter_by(bundle_id=bundle_id).all()]
+		tokens = [token.id for token in Token.query.filter_by(bundle_id=bundle_id).all()]
 		log_event("GET /tokens/{bundle_id} -> 200 Success".format(bundle_id=bundle_id))
 		return tokens, 200
 
@@ -92,7 +92,7 @@ class AllTokensForUserID(Resource):
 	GET-ONLY
 	"""
 	def get(self, user_id):
-		user_record = UserTable.query.filter_by(id=user_id).first()
+		user_record = User.query.filter_by(id=user_id).first()
 		if user_record:
 			tokens = [token.id for token in user_record.tokens]
 			log_event("GET /user/{user}/tokens -> 200 Success".format(user=user_id))
@@ -107,7 +107,7 @@ class AllUserIDs(Resource):
 	GET-ONLY
 	"""
 	def get(self):
-		all_users = [entry.id for entry in UserTable.query.all()]
+		all_users = [entry.id for entry in User.query.all()]
 		log_event("GET /users -> 200 Success")
 		return all_users, 200
 
@@ -118,7 +118,7 @@ class AllUsersForBundleID(Resource):
 	GET-ONLY
 	"""
 	def get(self, bundle_id):
-		all_users = list(dict.fromkeys([token.user_id for token in TokenTable.query.filter_by(bundle_id=bundle_id) if token.bundle_id == bundle_id]))
+		all_users = list(dict.fromkeys([token.user_id for token in Token.query.filter_by(bundle_id=bundle_id) if token.bundle_id == bundle_id]))
 		log_event("GET /users/{bundle_id} -> 200 Success".format(bundle_id=bundle_id))
 		return all_users, 200
 
@@ -129,7 +129,7 @@ class TokenByID(Resource):
 	GET, DELETE
 	"""
 	def get(self, token_id):
-		token = TokenTable.query.filter_by(id=token_id).first()
+		token = Token.query.filter_by(id=token_id).first()
 		if token:
 			log_event("GET /token/{token_id} -> 200 Success".format(token_id=token_id))
 			return {"id": token.id, "bundle-id": token.bundle_id, "user": token.user.name, "user-id": token.user_id}, 200
@@ -138,8 +138,8 @@ class TokenByID(Resource):
 			return "{token_id} not found".format(token_id=token_id), 404
 
 	def delete(self, token_id):
-		if TokenTable.query.filter_by(id=token_id).first():
-			TokenTable.query.filter_by(id=token_id).delete()
+		if Token.query.filter_by(id=token_id).first():
+			Token.query.filter_by(id=token_id).delete()
 			db.session.commit()
 			log_event("DELETE /token/{token_id} -> 200 Success".format(token_id=token_id))
 			return "{token_id} has been deleted".format(token_id=token_id), 200
@@ -157,7 +157,7 @@ class UserByID(Resource):
 		"""
 		Gets info for given UserID
 		"""
-		user_record = UserTable.query.filter_by(id=user_id).first()
+		user_record = User.query.filter_by(id=user_id).first()
 		if user_record:
 			user = {
 				"admin": str(bool(user_record.admin)),
@@ -182,13 +182,13 @@ class UserByID(Resource):
 		args = parser.parse_args()
 
 		if valid_data(args):
-			user_record = UserTable.query.filter_by(id=user_id).first()
+			user_record = User.query.filter_by(id=user_id).first()
 			if user_record:
 				log_event("POST /user/{request} -> 409 AlreadyExists".format(request=user_id))
 				return "User {user_id} already exists".format(user_id=user_id), 409
 			else:
-				db.session.add(UserTable(id=user_id, name=args["name"]))
-				db.session.add(TokenTable(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db.session.add(User(id=user_id, name=args["name"]))
+				db.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
 				db.session.commit()
 				log_event("POST /user/{request} -> 201 Created {result}".format(request=user_id, result=args))
 				return "Created user {user_id}".format(user_id=user_id), 201
@@ -207,13 +207,13 @@ class UserByID(Resource):
 		args = parser.parse_args()
 
 		if valid_data(args):
-			user_record = UserTable.query.filter_by(id=user_id)
+			user_record = User.query.filter_by(id=user_id)
 			if user_record.first():
 				user_record.update(dict(name=args["name"]))
 				if args["device-token"] not in [token.id for token in user_record.first().tokens]:
-					db.session.add(TokenTable(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
+					db.session.add(Token(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
 				else:
-					TokenTable.query.filter_by(id=args["device-token"]).update(dict(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+					Token.query.filter_by(id=args["device-token"]).update(dict(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
 				db.session.commit()
 				log_event("PUT /user/{request} -> 200 Success".format(request=user_id))
 				return "User {user_id} updated".format(user_id=user_id), 200
@@ -233,7 +233,7 @@ class UserByID(Resource):
 		args = parser.parse_args()
 
 		if args["name"] not in ["", None]:
-			user_record = UserTable.query.filter_by(id=user_id)
+			user_record = User.query.filter_by(id=user_id)
 			if user_record.first():
 				if user_record.first().name != args["name"]:
 					user_record.update(dict(name=args["name"]))
@@ -255,9 +255,9 @@ class UserByID(Resource):
 		"""
 		Deletes given User and associated DeviceTokens
 		"""
-		user_record = UserTable.query.filter_by(id=user_id).first()
+		user_record = User.query.filter_by(id=user_id).first()
 		if user_record:
-			for token in TokenTable.query.filter_by(user_id=user_record.id).all():
+			for token in Token.query.filter_by(user_id=user_record.id).all():
 				db.session.delete(token)
 			db.session.delete(user_record)
 			db.session.commit()
@@ -283,7 +283,7 @@ class SessionRelationship(object):
 		self.session_id = session_id
 		self.user_id = user_id
 
-class UserTable(db.Model):
+class User(db.Model):
 	"""
 	CREATE TABLE user (
 		id TEXT PRIMARY KEY,
@@ -295,12 +295,12 @@ class UserTable(db.Model):
 	id = db.Column(db.Text, primary_key=True)
 	admin = db.Column(db.Integer, default=0, nullable=False)
 	name = db.Column(db.Text, nullable=False)
-	tokens = db.relationship("TokenTable", backref="user", lazy=True)
+	tokens = db.relationship("Token", backref="user", lazy=True)
 
 	def __repr__(self):
 		return "<User %r>" % self.name
 
-class BundleTable(db.Model):
+class Bundle(db.Model):
 	"""
 	CREATE TABLE bundle (
 		id TEXT NOT NULL PRIMARY KEY
@@ -312,7 +312,7 @@ class BundleTable(db.Model):
 	def __repr__(self):
 		return "<Bundle %r>" % self.id
 
-class TokenTable(db.Model):
+class Token(db.Model):
 	"""
 	CREATE TABLE token (
 		id TEXT NOT NULL PRIMARY KEY,
@@ -330,7 +330,7 @@ class TokenTable(db.Model):
 	def __repr__(self):
 		return "<Token %r>" % self.id
 
-class SessionTable(db.Model):
+class Session(db.Model):
 	"""
 	CREATE TABLE session (
 		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -340,7 +340,7 @@ class SessionTable(db.Model):
 	__tablename__ = "session"
 	id = db.Column(db.Integer, primary_key=True)
 	active = db.Column(db.Integer, default=0, nullable=False)
-	users = db.relationship("UserTable", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
+	users = db.relationship("User", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
 
 	def __repr__(self):
 		return "<Session %r>" % self.id

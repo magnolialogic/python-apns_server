@@ -8,7 +8,7 @@ import requests
 import sys
 import yaml
 
-class Session:
+class PushSession:
 	def __init__(self, background=None, title="Title", body="Body", silent=True, badge=0, dev=True, yaml_tokens=False):
 		self.title = title
 		self.body = body
@@ -44,14 +44,16 @@ class Session:
 					if len(loaded_tokens) == 0:
 						sys.exit("No target device tokens in tokens.yaml")
 					tokens = [target["device-token"] for target in loaded_tokens if target["bundle-id"] == loaded_app["bundle-id"]]
+					if len(tokens) == 0:
+						sys.exit("No target device tokens with matching BundleID")
 				except yaml.YAMLError:
 					sys.exit(yaml.YAMLError)
 		else:
 			api_url = config["api-url"] + "/tokens/" + loaded_app["bundle-id"]
-			tokens = list(loads(requests.get(api_url).text))
-
-		if len(tokens) == 0:
-			sys.exit("No target device tokens with matching BundleID")
+			try:
+				tokens = list(loads(requests.get(api_url).text))
+			except:
+				sys.exit("Unable to parse JSON response, check APNS remote notification server.")
 
 		# Assign loaded .yaml data to constants
 		auth_key = loaded_app["auth-key"]
