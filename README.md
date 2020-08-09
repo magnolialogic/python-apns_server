@@ -4,19 +4,22 @@ Python server-side tools for managing APNS device tokens and generating test not
 ## Dependencies
 [PyAPNs2](https://github.com/Pr0Ger/PyAPNs2)
 
-[flask](https://pypi.org/project/Flask/)
+[flask](https://github.com/pallets/flask)
 
-[flask_restful](https://pypi.org/project/Flask-RESTful/)
+[flask-restful](https://github.com/flask-restful/flask-restful)
+
+[flask-sqlalchemy](https://github.com/pallets/flask-sqlalchemy)
 
 ## Usage
 #### server.py
 python + Flask micro RESTful API for receiving and storing APNS tokens from your iOS apps
 
 ###### Usage
-1. Copy `app.yaml` and `ssl.yaml` into script root directory
+1. Copy `app.yaml` and `config.yaml` into script root directory
 2. Use [certbot](https://certbot.eff.org/) to generate SSL certificate + key files
-3. Update `ssl.conf` with paths to newly generated SSL cert + key and update `app.yaml` with your Xcode Team ID and paths to your cert + app key files
-4. Start the server with `./server.py --debug`
+3. Create SQLite database: `sqlite3 /path/to/sqlite.db < schema.sql`
+4. Update `config.conf` with paths to newly generated SQLite database and SSL cert/key, and update `app.yaml` with your Xcode Team ID and paths to your cert + app key files
+5. Start the server with `./server.py --debug`
 
 To run as a system service skip step 4 and:
 ```
