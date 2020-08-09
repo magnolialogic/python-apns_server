@@ -3,8 +3,9 @@
 from apns_session import Session
 import argparse
 from datetime import datetime
-from flask import Flask, g
-from flask_restful import Api, fields, marshal_with, reqparse, Resource
+from flask import Flask
+from flask_restful import Api, reqparse, Resource
+from flask_sqlalchemy import SQLAlchemy
 import os
 import sqlite3
 import sys
@@ -16,47 +17,25 @@ args = parser.parse_args()
 
 script_home = os.path.dirname(os.path.realpath(__file__))
 
-users_filename = "users.yaml"
-users_file_mode = "r" if os.path.exists(users_filename) else "w"
-users = []
+# Read YAML config file
 
-user_fields = {
-	"bundle-id": fields.String,
-	"device-token": fields.List(fields.String),
-	"name": fields.String,
-	"user-id": fields.String
-}
-
-# Read YAML config files
-
-with open(os.path.join(script_home, users_filename), users_file_mode) as users_file:
-	if users_file_mode == "r":
-		try:
-			users = list(yaml.safe_load_all(users_file))
-			users = [user for user in users if user != None]
-		except yaml.YAMLError:
-			sys.exit(yaml.YAMLError)
-	else:
-		users_file.write("---\n")
-		users_file.write("...\n")
-		users_file.truncate()
-
-with open(os.path.join(script_home, "ssl.yaml")) as ssl_file:
+with open(os.path.join(script_home, "config.yaml")) as config_file:
 	try:
-		ssl_settings = yaml.safe_load(ssl_file)
+		config = yaml.safe_load(config_file)
 	except yaml.YAMLError:
 		sys.exit(yaml.YAMLError)
 
-def write_yaml(users):
-	with open(os.path.join(script_home, users_filename), "w") as user_file:
-		try:
-			updated_users = yaml.safe_dump_all(users)
-			user_file.write("---\n")
-			user_file.write(updated_users)
-			user_file.write("...\n")
-			user_file.truncate()
-		except yaml.YAMLError:
-			sys.exit(yaml.YAMLError)
+app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = config["sqlite-path"]
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
+
+db = SQLAlchemy(app)
+
+session_relationship_table = db.Table("session_relationship",
+	db.Column("id", db.Integer, primary_key=True),
+	db.Column("session_id", db.Integer, db.ForeignKey("session.id"), nullable=False),
+	db.Column("user_id", db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+)
 
 # Convenience methods
 
@@ -65,7 +44,7 @@ def log_event(message):
 		log_file.write("{timestamp}: {message}\n".format(timestamp=datetime.now().strftime("%m/%d/%Y %H:%M:%S"), message=message))
 
 def valid_data(data):
-	expected_keys = ["bundle-id", "device-token", "name", "user-id"]
+	expected_keys = ["bundle-id", "device-token", "name"]
 	if sorted(expected_keys) == sorted(list(data.keys())):
 		for value in data.values():
 			if value in ["", None]:
@@ -76,177 +55,261 @@ def valid_data(data):
 
 # Flask Resources
 
-class Tokens(Resource):
+class AllTokenIDs(Resource):
 	"""
 	Returns all DeviceTokens
 	/tokens
 	GET-ONLY
 	"""
 	def get(self):
-		all_tokens = []
-		for entry in users:
-			all_tokens.append(entry["device-token"])
+		tokens = [token.id for token in TokenTable.query.all()]
 		log_event("GET /tokens -> 200 Success")
-		return all_tokens, 200
+		return tokens, 200
 
-class TokensForUser(Resource):
+class AllTokensForBundleID(Resource):
+	"""
+	Returns all DeviceTokens for a given BundleID
+	/tokens/<string:bundle_id>
+	GET-ONLY
+	"""
+	def get(self, bundle_id):
+		tokens = [token.id for token in TokenTable.query.filter_by(bundle_id=bundle_id).all()]
+		log_event("GET /tokens/{bundle_id} -> 200 Success")
+		return tokens, 200
+
+class AllTokensForUserID(Resource):
 	"""
 	Returns all DeviceTokens for a given UserID
-	/user/<string_user_id>/tokens
-	GET ONLY
+	/user/<string:user_id>/tokens
+	GET-ONLY
 	"""
 	def get(self, user_id):
-		for entry in users:
-			if user_id == entry["user-id"]:
-				log_event("GET /user/{user}/token -> 200 Success".format(user=user_id))
-				return entry["device-token"], 200
+		user_record = UserTable.query.filter_by(id=user_id).first()
+		if user_record:
+			tokens = [token.id for token in user_record.tokens]
+			log_event("GET /user/{user}/token -> 200 Success".format(user=user_id))
+			return tokens, 200
+		else:
+			return "User {user_id} does not exist".format(user_id=user_id), 404
 
-class User(Resource):
+class AllUserIDs(Resource):
+	"""
+	Returns UserIDs for all Users
+	/users
+	GET-ONLY
+	"""
+	def get(self):
+		all_users = [entry.id for entry in UserTable.query.all()]
+		log_event("GET /users -> 200 Success")
+		return all_users, 200
+
+class AllUsersForBundleID(Resource):
+	"""
+	Returns all UserIDs for given BundleID
+	/users/<string:bundle_id>
+	GET-ONLY
+	"""
+	def get(self, bundle_id):
+		all_users = list(dict.fromkeys([token.user_id for token in TokenTable.query.filter_by(bundle_id=bundle_id) if token.bundle_id == bundle_id]))
+		log_event("GET /users/{bundle_id} -> 200 Success")
+		return all_users, 200
+
+class TokenByID(Resource):
+	"""
+	Returns DeviceToken for given ID
+	/token/<string:token_id>
+	GET, DELETE
+	"""
+	def get(self, token_id):
+		token = TokenTable.query.filter_by(id=token_id).first()
+		if token:
+			log_event("GET /token/{token_id} -> 200 Success".format(token_id=token_id))
+			return {"id": token.id, "bundle-id": token.bundle_id, "user": token.user.name, "user-id": token.user_id}, 200
+		else:
+			log_event("GET /token/{token_id} -> 404 NotFound".format(token_id=token_id))
+			return "{token_id} not found".format(token_id=token_id), 404
+
+	def delete(self, token_id):
+		if TokenTable.query.filter_by(id=token_id).first():
+			TokenTable.query.filter_by(id=token_id).delete()
+			db.session.commit()
+			log_event("DELETE /token/{token_id} -> 200 Success".format(token_id=token_id))
+			return "{token_id} has been deleted".format(token_id=token_id), 200
+		else:
+			log_event("DELETE /token/{token_id} -> 404 NotFound".format(token_id=token_id))
+			return "{token_id} not found".format(token_id=token_id), 404
+
+class UserByID(Resource):
 	"""
 	User for given UserID
 	/user/<string:user_id>
 	GET, POST, PUT, PATCH, DELETE
 	"""
 	def get(self, user_id):
-		for entry in users:
-			if user_id == entry["user-id"]:
-				log_event("GET /user/{request} -> 200 Success {result}".format(request=user_id, result=entry))
-				return entry, 200
-
-		log_event("GET /user/{request} -> 404 NotFound".format(request=user_id))
-		return "User not found", 404
+		"""
+		Gets info for given UserID
+		"""
+		user_record = UserTable.query.filter_by(id=user_id).first()
+		if user_record:
+			user = {
+				"device-tokens": [token.id for token in user_record.tokens],
+				"name": user_record.name,
+				"user-id": user_record.id
+			}
+			log_event("GET /user/{request} -> 200 Success {result}".format(request=user_id, result=user))
+			return user, 200
+		else:
+			log_event("GET /user/{request} -> 404 NotFound".format(request=user_id))
+			return "User {user_id} not found".format(user_id=user_id), 404
 
 	def post(self, user_id):
-		global users
+		"""
+		Creates given UserID
+		"""
 		parser = reqparse.RequestParser()
 		parser.add_argument("bundle-id", type=str)
 		parser.add_argument("device-token", type=str)
 		parser.add_argument("name", type=str)
 		args = parser.parse_args()
 
-		new_user = {
-			"name": args["name"],
-			"bundle-id": args["bundle-id"],
-			"device-token": args["device-token"],
-			"user-id": user_id
-		}
-
-		if valid_data(new_user):
-			for entry in users:
-				if user_id == entry["user-id"]:
-					log_event("POST /user/{request} -> 409 AlreadyExists {result}".format(request=user_id, result=entry))
-					return "User with token {user_id} already exists".format(user_id=user_id), 409
-
-			updated_users = [user for user in users if not user == None]
-			updated_users.append(new_user)
-			users = updated_users
-			write_yaml(users)
-			log_event("POST /user/{request} -> 201 Created {result}".format(request=user_id, result=new_user))
-			return new_user, 201
+		if valid_data(args):
+			user_record = UserTable.query.filter_by(id=user_id).first()
+			if user_record:
+				log_event("POST /user/{request} -> 409 AlreadyExists".format(request=user_id))
+				return "User {user_id} already exists".format(user_id=user_id), 409
+			else:
+				db.session.add(UserTable(id=user_id, name=args["name"]))
+				db.session.add(TokenTable(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db.session.commit()
+				log_event("POST /user/{request} -> 201 Created {result}".format(request=user_id, result=args))
+				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
-			log_event("POST /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=new_user))
-			return new_user, 400
+			log_event("POST /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=args))
+			return args, 400
 
 	def put(self, user_id):
+		"""
+		Creates or completely replaces given UserID
+		"""
 		parser = reqparse.RequestParser()
 		parser.add_argument("bundle-id", type=str)
 		parser.add_argument("device-token", type=str)
 		parser.add_argument("name", type=str)
 		args = parser.parse_args()
 
-		new_user = {
-			"name": args["name"],
-			"bundle-id": args["bundle-id"],
-			"device-token": args["device-token"],
-			"user-id": user_id
-		}
-
-		if valid_data(new_user):
-			for entry in users:
-				if user_id == entry["user-id"]:
-					entry["name"] = args["name"]
-					entry["bundle-id"] = args["bundle-id"]
-					entry["device-token"] = args["device-token"]
-					log_event("PUT /user/{request} -> 200 Success {result}".format(request=user_id, result=entry))
-					write_yaml(users)
-					return entry, 200
-
-			log_event("PUT /user/{request} -> 201 Created {result}".format(request=user_id, result=new_user))
-			users.append(new_user)
-			write_yaml(users)
-			return new_user, 201
+		if valid_data(args):
+			user_record = UserTable.query.filter_by(id=user_id)
+			if user_record.first():
+				user_record.update(dict(name=args["name"]))
+				if args["device-token"] not in [token.id for token in user_record.first().tokens]:
+					db.session.add(TokenTable(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
+				else:
+					TokenTable.query.filter_by(id=args["device-token"]).update(dict(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db.session.commit()
+				log_event("PUT /user/{request} -> 200 Success".format(request=user_id))
+				return "User {user_id} updated".format(user_id=user_id), 200
+			else:
+				log_event("PUT /user/{request} -> 201 Created".format(request=user_id))
+				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
-			log_event("PUT /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=new_user))
-			return new_user, 400
+			log_event("PUT /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=args))
+			return args, 400
 
 	def patch(self, user_id):
+		"""
+		Updates Name for given UserID
+		"""
 		parser = reqparse.RequestParser()
-		parser.add_argument("bundle-id", type=str)
-		parser.add_argument("device-token", type=str)
 		parser.add_argument("name", type=str)
 		args = parser.parse_args()
 
-		new_user = {
-			"name": args["name"],
-			"bundle-id": args["bundle-id"],
-			"device-token": args["device-token"],
-			"user-id": user_id
-		}
+		if args["name"] not in ["", None]:
+			user_record = UserTable.query.filter_by(id=user_id)
+			if user_record.first():
+				if user_record.first().name != args["name"]:
+					user_record.update(dict(name=args["name"]))
+					db.session.commit()
+					log_event("PATCH /user/{request} -> 200 Success {result}".format(request=user_id, result=args))
+					return "Updated name for user {user_id}".format(user_id=user_id), 200
+				else:
+					log_event("PATCH /user/{request} -> 304 NotModified {result}".format(request=user_id, result=args))
+					return 304
+			else:
+				log_event("PATCH /user/{request} -> 404 NotFound {result}".format(request=user_id, result=args))
+				return "User {user_id} not found".format(user_id=user_id), 404
 
-		if valid_data(new_user):
-			for entry in users:
-				if user_id == entry["user-id"]:
-					if entry["name"] == args["name"] and entry["bundle-id"] == args["bundle-id"] and entry["device-token"] == args["device-token"]:
-						log_event("PATCH /user/{request} -> 304 NotModified {result}".format(request=user_id, result=entry))
-						return new_user, 304
-					else:
-						if entry["name"] != args["name"]: entry["name"] = args["name"]
-						if entry["bundle-id"] != args["bundle-id"]: entry["bundle-id"] = args["bundle-id"]
-						if entry["device-token"] != args["device-token"]: entry["device-token"] = args["device-token"]
-						log_event("PATCH /user/{request} -> 200 Success {result}".format(request=user_id, result=entry))
-						write_yaml(users)
-						return new_user, 200
-
-			log_event("PATCH /user/{request} -> 404 NotFound {result}".format(request=user_id, result=new_user))
-			return new_user, 404
 		else:
-			log_event("PATCH /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=new_user))
-			return new_user, 400
+			log_event("PATCH /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=args))
+			return args, 400
 
 	def delete(self, user_id):
-		global users
-		for entry in users:
-			if user_id == entry["user-id"]:
-				log_event("DELETE /user/{request} -> 200 Success".format(request=user_id))
-				users = [entry for entry in users if entry["user-id"] != user_id]
-				write_yaml(users)
-				return "{user} has been deleted".format(user=user_id), 200
+		"""
+		Deletes given User and associated DeviceTokens
+		"""
+		user_record = UserTable.query.filter_by(id=user_id).first()
+		if user_record:
+			for token in TokenTable.query.filter_by(user_id=user_record.id).all():
+				db.session.delete(token)
+			db.session.delete(user_record)
+			db.session.commit()
+			log_event("DELETE /user/{request} -> 200 Success".format(request=user_id))
+			return "{user} has been deleted".format(user=user_id), 200
+		else:
+			log_event("DELETE /user/{request} -> 404 NotFound".format(request=user_id))
+			return "{user} not found".format(user=user_id), 404
 
-		log_event("DELETE /user/{request} -> 404 NotFound".format(request=user_id))
-		return "{user} not found".format(user=user_id), 404
+# SQLAlchemy models
 
-class Users(Resource):
-	"""
-	Returns UserIDs for all Users
-	/users
-	GET ONLY
-	"""
-	def get(self):
-		all_users = []
-		for entry in users:
-			all_users.append(entry["user-id"])
-			log_event("GET /users -> 200 Success")
-		return all_users, 200
+class SessionRelationship(object):
+    def __init__(self, session_id, user_id):
+        self.session_id = session_id
+        self.user_id = user_id
+
+class UserTable(db.Model):
+    __tablename__ = "user"
+    id = db.Column(db.Text, primary_key=True)
+    name = db.Column(db.Text, nullable=False)
+    tokens = db.relationship("TokenTable", backref="user", lazy=True)
+
+    def __repr__(self):
+        return "<User %r>" % self.name
+
+class BundleTable(db.Model):
+    __tablename__ = "bundle"
+    id = db.Column(db.Text, primary_key=True)
+
+    def __repr__(self):
+        return "<Bundle %r>" % self.id
+
+class TokenTable(db.Model):
+    __tablename__ = "token"
+    id = db.Column(db.Text, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    bundle_id = db.Column(db.Text, db.ForeignKey("bundle.id"), nullable=False)
+
+    def __repr__(self):
+        return "<Token %r>" % self.id
+
+class SessionTable(db.Model):
+    __tablename__ = "session"
+    id = db.Column(db.Integer, primary_key=True)
+    active = db.Column(db.Integer, default=0, nullable=False)
+    users = db.relationship("UserTable", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
+
+    def __repr__(self):
+        return "<Session %r>" % self.id
 
 # Do The Thing
 
-api_version = "/v1/"
-
 if __name__ == "__main__":
-	app = Flask(__name__)
+	db.mapper(SessionRelationship, session_relationship_table)
+	api_version = "/v1/"
 	api = Api(app)
-	api.add_resource(Tokens, api_version + "/tokens")
-	api.add_resource(TokensForUser, api_version + "/user/<string:user_id>/tokens")
-	api.add_resource(User, api_version + "/user/<string:user_id>")
-	api.add_resource(Users, api_version + "/users")
-	app.run(ssl_context=(ssl_settings["cert-path"], ssl_settings["key-path"]), debug=args.debug)
+	api.add_resource(AllTokenIDs, api_version + "/tokens")
+	api.add_resource(AllTokensForBundleID, api_version + "/tokens/<string:bundle_id>")
+	api.add_resource(AllTokensForUserID, api_version + "/user/<string:user_id>/tokens")
+	api.add_resource(AllUserIDs, api_version + "/users")
+	api.add_resource(AllUsersForBundleID, api_version + "/users/<string:bundle_id>")
+	api.add_resource(TokenByID, api_version + "/token/<string:token_id>")
+	api.add_resource(UserByID, api_version + "/user/<string:user_id>")
+	app.run(ssl_context=(config["cert-path"], config["key-path"]), debug=args.debug)

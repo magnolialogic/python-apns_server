@@ -1,4 +1,5 @@
 ---
 cert-path: /path/to/fullchain.pem
 key-path: /path/to/privkey.pem
+ssl-path: sqlite:///path/to/sqlite.db
 ...
