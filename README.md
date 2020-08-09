@@ -2,13 +2,13 @@
 Python server-side tools for managing APNS device tokens and generating test notifications
 
 ## Dependencies
-[PyAPNs2](https://github.com/Pr0Ger/PyAPNs2)
-
 [flask](https://github.com/pallets/flask)
 
 [flask-restful](https://github.com/flask-restful/flask-restful)
 
 [flask-sqlalchemy](https://github.com/pallets/flask-sqlalchemy)
+
+[PyAPNs2](https://github.com/Pr0Ger/PyAPNs2)
 
 ## Usage
 #### server.py
@@ -28,7 +28,7 @@ $ sudo systemctl enable apns_server
 $ sudo systemctl start apns_server
 ```
 
-#### apns_send.py
+#### send.py
 Use to send test notifications to your iOS app via APNS
 ```
 usage: send.py [-h] [--prod] [--title TITLE] [--body BODY] [--badge BADGE]
