@@ -37,6 +37,8 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
 db = SQLAlchemy(app)
 
+# Initialize SessionRelationship helper table
+
 session_relationship_table = db.Table("session_relationship",
 	db.Column("id", db.Integer, primary_key=True),
 	db.Column("session_id", db.Integer, db.ForeignKey("session.id"), nullable=False),
@@ -268,11 +270,27 @@ class UserByID(Resource):
 # SQLAlchemy models
 
 class SessionRelationship(object):
+	"""
+	CREATE TABLE session_relationship (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id),
+        FOREIGN KEY (session_id) REFERENCES session(id)
+	);
+	"""
 	def __init__(self, session_id, user_id):
 		self.session_id = session_id
 		self.user_id = user_id
 
 class UserTable(db.Model):
+	"""
+	CREATE TABLE user (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        admin INTEGER DEFAULT 0 NOT NULL CHECK(admin >= 0 AND admin <= 1)
+	);
+	"""
 	__tablename__ = "user"
 	id = db.Column(db.Text, primary_key=True)
 	admin = db.Column(db.Integer, default=0, nullable=False)
@@ -283,6 +301,11 @@ class UserTable(db.Model):
 		return "<User %r>" % self.name
 
 class BundleTable(db.Model):
+	"""
+	CREATE TABLE bundle (
+        id TEXT NOT NULL PRIMARY KEY
+	);
+	"""
 	__tablename__ = "bundle"
 	id = db.Column(db.Text, primary_key=True)
 
@@ -290,6 +313,15 @@ class BundleTable(db.Model):
 		return "<Bundle %r>" % self.id
 
 class TokenTable(db.Model):
+	"""
+	CREATE TABLE token (
+        id TEXT NOT NULL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        bundle_id TEXT NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES user(id),
+        FOREIGN KEY (bundle_id) REFERENCES bundle(id)
+	);
+	"""
 	__tablename__ = "token"
 	id = db.Column(db.Text, primary_key=True)
 	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
@@ -299,6 +331,12 @@ class TokenTable(db.Model):
 		return "<Token %r>" % self.id
 
 class SessionTable(db.Model):
+	"""
+	CREATE TABLE session (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        active INTEGER DEFAULT 0 NOT NULL CHECK(active >= 0 AND active <= 1)
+	);
+	"""
 	__tablename__ = "session"
 	id = db.Column(db.Integer, primary_key=True)
 	active = db.Column(db.Integer, default=0, nullable=False)
@@ -313,7 +351,6 @@ if __name__ == "__main__":
 	db.mapper(SessionRelationship, session_relationship_table)
 	api = Api(app)
 	api_root = "/v" + api_version
-	print(api_root)
 	api.add_resource(AllTokenIDs, api_root + "/tokens")
 	api.add_resource(AllTokensForBundleID, api_root + "/tokens/<string:bundle_id>")
 	api.add_resource(AllTokensForUserID, api_root + "/user/<string:user_id>/tokens")
