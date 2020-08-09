@@ -6,7 +6,8 @@ DROP TABLE IF EXISTS session_relationship;
 
 CREATE TABLE user (
 	id TEXT PRIMARY KEY,
-	name TEXT NOT NULL
+	name TEXT NOT NULL,
+	admin INTEGER DEFAULT 0 NOT NULL CHECK(admin >= 0 AND admin <= 1)
 );
 
 CREATE TABLE bundle (
