@@ -17,7 +17,7 @@ python + Flask micro RESTful API for receiving and storing APNS tokens from your
 ###### Usage
 1. Copy `config.yaml` into script root directory
 2. Use [certbot](https://certbot.eff.org/) to generate SSL certificate + key files
-3. Create SQLite database: `sqlite3 /path/to/sqlite.db < schema.sql`
+3. Create SQLite database: `sqlite3 /path/to/sqlite.db < etc/schema.sql`
 4. Update `config.yaml` with paths to newly generated SQLite database and SSL cert/key
 5. Start the server with `./server.py --debug`
 
