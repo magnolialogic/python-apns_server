@@ -7,15 +7,19 @@ from flask import Flask
 from flask_restful import Api, reqparse, Resource
 from flask_sqlalchemy import SQLAlchemy
 import os
-import sqlite3
 import sys
 import yaml
+
+# Constants
+
+api_version = "/v1/"
+script_home = os.path.dirname(os.path.realpath(__file__))
+
+# Parse command-line arguments
 
 parser = argparse.ArgumentParser(description="Flask RESTful microservice for managing iOS APNS device tokens")
 parser.add_argument("--debug", action="store_true", help="Run Flask app in debug mode")
 args = parser.parse_args()
-
-script_home = os.path.dirname(os.path.realpath(__file__))
 
 # Read YAML config file
 
@@ -24,6 +28,8 @@ with open(os.path.join(script_home, "config.yaml")) as config_file:
 		config = yaml.safe_load(config_file)
 	except yaml.YAMLError:
 		sys.exit(yaml.YAMLError)
+
+# Configure Flask app and set up SQLite DB
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = config["sqlite-path"]
@@ -303,7 +309,6 @@ class SessionTable(db.Model):
 
 if __name__ == "__main__":
 	db.mapper(SessionRelationship, session_relationship_table)
-	api_version = "/v1/"
 	api = Api(app)
 	api.add_resource(AllTokenIDs, api_version + "/tokens")
 	api.add_resource(AllTokensForBundleID, api_version + "/tokens/<string:bundle_id>")
