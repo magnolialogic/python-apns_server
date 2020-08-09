@@ -272,11 +272,11 @@ class UserByID(Resource):
 class SessionRelationship(object):
 	"""
 	CREATE TABLE session_relationship (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        session_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES user(id),
-        FOREIGN KEY (session_id) REFERENCES session(id)
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		session_id INTEGER NOT NULL,
+		user_id INTEGER NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES user(id),
+		FOREIGN KEY (session_id) REFERENCES session(id)
 	);
 	"""
 	def __init__(self, session_id, user_id):
@@ -286,9 +286,9 @@ class SessionRelationship(object):
 class UserTable(db.Model):
 	"""
 	CREATE TABLE user (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        admin INTEGER DEFAULT 0 NOT NULL CHECK(admin >= 0 AND admin <= 1)
+		id TEXT PRIMARY KEY,
+		name TEXT NOT NULL,
+		admin INTEGER DEFAULT 0 NOT NULL CHECK(admin >= 0 AND admin <= 1)
 	);
 	"""
 	__tablename__ = "user"
@@ -303,7 +303,7 @@ class UserTable(db.Model):
 class BundleTable(db.Model):
 	"""
 	CREATE TABLE bundle (
-        id TEXT NOT NULL PRIMARY KEY
+		id TEXT NOT NULL PRIMARY KEY
 	);
 	"""
 	__tablename__ = "bundle"
@@ -315,11 +315,11 @@ class BundleTable(db.Model):
 class TokenTable(db.Model):
 	"""
 	CREATE TABLE token (
-        id TEXT NOT NULL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        bundle_id TEXT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES user(id),
-        FOREIGN KEY (bundle_id) REFERENCES bundle(id)
+		id TEXT NOT NULL PRIMARY KEY,
+		user_id INTEGER NOT NULL,
+		bundle_id TEXT NOT NULL,
+		FOREIGN KEY (user_id) REFERENCES user(id),
+		FOREIGN KEY (bundle_id) REFERENCES bundle(id)
 	);
 	"""
 	__tablename__ = "token"
@@ -333,8 +333,8 @@ class TokenTable(db.Model):
 class SessionTable(db.Model):
 	"""
 	CREATE TABLE session (
-        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        active INTEGER DEFAULT 0 NOT NULL CHECK(active >= 0 AND active <= 1)
+		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		active INTEGER DEFAULT 0 NOT NULL CHECK(active >= 0 AND active <= 1)
 	);
 	"""
 	__tablename__ = "session"
