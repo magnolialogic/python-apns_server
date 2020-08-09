@@ -158,6 +158,7 @@ class UserByID(Resource):
 		user_record = UserTable.query.filter_by(id=user_id).first()
 		if user_record:
 			user = {
+				"admin": str(bool(user_record.admin)),
 				"device-tokens": [token.id for token in user_record.tokens],
 				"name": user_record.name,
 				"user-id": user_record.id
@@ -267,43 +268,44 @@ class UserByID(Resource):
 # SQLAlchemy models
 
 class SessionRelationship(object):
-    def __init__(self, session_id, user_id):
-        self.session_id = session_id
-        self.user_id = user_id
+	def __init__(self, session_id, user_id):
+		self.session_id = session_id
+		self.user_id = user_id
 
 class UserTable(db.Model):
-    __tablename__ = "user"
-    id = db.Column(db.Text, primary_key=True)
-    name = db.Column(db.Text, nullable=False)
-    tokens = db.relationship("TokenTable", backref="user", lazy=True)
+	__tablename__ = "user"
+	id = db.Column(db.Text, primary_key=True)
+	admin = db.Column(db.Integer, default=0, nullable=False)
+	name = db.Column(db.Text, nullable=False)
+	tokens = db.relationship("TokenTable", backref="user", lazy=True)
 
-    def __repr__(self):
-        return "<User %r>" % self.name
+	def __repr__(self):
+		return "<User %r>" % self.name
 
 class BundleTable(db.Model):
-    __tablename__ = "bundle"
-    id = db.Column(db.Text, primary_key=True)
+	__tablename__ = "bundle"
+	id = db.Column(db.Text, primary_key=True)
 
-    def __repr__(self):
-        return "<Bundle %r>" % self.id
+	def __repr__(self):
+		return "<Bundle %r>" % self.id
 
 class TokenTable(db.Model):
-    __tablename__ = "token"
-    id = db.Column(db.Text, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    bundle_id = db.Column(db.Text, db.ForeignKey("bundle.id"), nullable=False)
+	__tablename__ = "token"
+	id = db.Column(db.Text, primary_key=True)
+	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+	bundle_id = db.Column(db.Text, db.ForeignKey("bundle.id"), nullable=False)
 
-    def __repr__(self):
-        return "<Token %r>" % self.id
+	def __repr__(self):
+		return "<Token %r>" % self.id
 
 class SessionTable(db.Model):
-    __tablename__ = "session"
-    id = db.Column(db.Integer, primary_key=True)
-    active = db.Column(db.Integer, default=0, nullable=False)
-    users = db.relationship("UserTable", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
+	__tablename__ = "session"
+	id = db.Column(db.Integer, primary_key=True)
+	active = db.Column(db.Integer, default=0, nullable=False)
+	users = db.relationship("UserTable", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
 
-    def __repr__(self):
-        return "<Session %r>" % self.id
+	def __repr__(self):
+		return "<Session %r>" % self.id
 
 # Do The Thing
 
