@@ -1,3 +1,5 @@
+/* DB initialization for https://github.com/magnolialogic/python-apns_server */
+
 DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS bundle;
 DROP TABLE IF EXISTS token;
