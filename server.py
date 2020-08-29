@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
-from apns_session import PushSession
 import argparse
-from datetime import datetime
 from flask import Flask
 from flask_restful import Api, reqparse, Resource
 from flask_sqlalchemy import SQLAlchemy
+from log_event import log_event
 import os
 import sys
 import yaml
@@ -13,7 +12,6 @@ import yaml
 # Constants
 
 api_version = "1"
-script_home = os.path.dirname(os.path.realpath(__file__))
 
 # Parse command-line arguments
 
@@ -23,7 +21,7 @@ args = parser.parse_args()
 
 # Read YAML config file
 
-with open(os.path.join(script_home, "config.yaml")) as config_file:
+with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.yaml")) as config_file:
 	try:
 		config = yaml.safe_load(config_file)
 	except yaml.YAMLError:
@@ -35,21 +33,17 @@ app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = config["sqlite-path"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
-db = SQLAlchemy(app)
+db_client = SQLAlchemy(app)
 
 # Initialize SessionRelationship helper table
 
-session_relationship_table = db.Table("session_relationship",
-	db.Column("id", db.Integer, primary_key=True),
-	db.Column("session_id", db.Integer, db.ForeignKey("session.id"), nullable=False),
-	db.Column("user_id", db.Integer, db.ForeignKey("user.id"), unique=True, nullable=False)
+session_relationship_table = db_client.Table("session_relationship",
+	db_client.Column("id", db_client.Integer, primary_key=True),
+	db_client.Column("session_id", db_client.Integer, db_client.ForeignKey("session.id"), nullable=False),
+	db_client.Column("user_id", db_client.Integer, db_client.ForeignKey("user.id"), unique=True, nullable=False)
 )
 
 # Convenience methods
-
-def log_event(message):
-	with open(os.path.join(script_home, "access.log"), "a") as log_file:
-		log_file.write("{timestamp}: {message}\n".format(timestamp=datetime.now().strftime("%m/%d/%Y %H:%M:%S"), message=message))
 
 def valid_data(data):
 	expected_keys = ["bundle-id", "device-token", "name"]
@@ -140,7 +134,7 @@ class TokenByID(Resource):
 	def delete(self, token_id):
 		if Token.query.filter_by(id=token_id).first():
 			Token.query.filter_by(id=token_id).delete()
-			db.session.commit()
+			db_client.session.commit()
 			log_event("DELETE /token/{token_id} -> 200 Success".format(token_id=token_id))
 			return "{token_id} has been deleted".format(token_id=token_id), 200
 		else:
@@ -187,9 +181,9 @@ class UserByID(Resource):
 				log_event("POST /user/{request} -> 409 AlreadyExists".format(request=user_id))
 				return "User {user_id} already exists".format(user_id=user_id), 409
 			else:
-				db.session.add(User(id=user_id, name=args["name"]))
-				db.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
-				db.session.commit()
+				db_client.session.add(User(id=user_id, name=args["name"]))
+				db_client.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db_client.session.commit()
 				log_event("POST /user/{request} -> 201 Created {result}".format(request=user_id, result=args))
 				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
@@ -211,16 +205,16 @@ class UserByID(Resource):
 			if user_record.first():
 				user_record.update(dict(name=args["name"]))
 				if args["device-token"] not in [token.id for token in user_record.first().tokens]:
-					db.session.add(Token(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
+					db_client.session.add(Token(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
 				else:
 					Token.query.filter_by(id=args["device-token"]).update(dict(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
-				db.session.commit()
+				db_client.session.commit()
 				log_event("PUT /user/{request} -> 200 Success".format(request=user_id))
 				return "User {user_id} updated".format(user_id=user_id), 200
 			else:
-				db.session.add(User(id=user_id, name=args["name"]))
-				db.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
-				db.session.commit()
+				db_client.session.add(User(id=user_id, name=args["name"]))
+				db_client.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
+				db_client.session.commit()
 				log_event("PUT /user/{request} -> 201 Created".format(request=user_id))
 				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
@@ -240,7 +234,7 @@ class UserByID(Resource):
 			if user_record.first():
 				if user_record.first().name != args["name"]:
 					user_record.update(dict(name=args["name"]))
-					db.session.commit()
+					db_client.session.commit()
 					log_event("PATCH /user/{request} -> 200 Success {result}".format(request=user_id, result=args))
 					return "Updated name for user {user_id}".format(user_id=user_id), 200
 				else:
@@ -261,9 +255,9 @@ class UserByID(Resource):
 		user_record = User.query.filter_by(id=user_id).first()
 		if user_record:
 			for token in Token.query.filter_by(user_id=user_record.id).all():
-				db.session.delete(token)
-			db.session.delete(user_record)
-			db.session.commit()
+				db_client.session.delete(token)
+			db_client.session.delete(user_record)
+			db_client.session.commit()
 			log_event("DELETE /user/{request} -> 200 Success".format(request=user_id))
 			return "{user} has been deleted".format(user=user_id), 200
 		else:
@@ -286,7 +280,7 @@ class SessionRelationship(object):
 		self.session_id = session_id
 		self.user_id = user_id
 
-class User(db.Model):
+class User(db_client.Model):
 	"""
 	CREATE TABLE user (
 		id TEXT PRIMARY KEY,
@@ -295,27 +289,27 @@ class User(db.Model):
 	);
 	"""
 	__tablename__ = "user"
-	id = db.Column(db.Text, primary_key=True)
-	admin = db.Column(db.Integer, default=0, nullable=False)
-	name = db.Column(db.Text, nullable=False)
-	tokens = db.relationship("Token", backref="user", lazy=True)
+	id = db_client.Column(db_client.Text, primary_key=True)
+	admin = db_client.Column(db_client.Integer, default=0, nullable=False)
+	name = db_client.Column(db_client.Text, nullable=False)
+	tokens = db_client.relationship("Token", backref="user", lazy=True)
 
 	def __repr__(self):
 		return "<User %r>" % self.name
 
-class Bundle(db.Model):
+class Bundle(db_client.Model):
 	"""
 	CREATE TABLE bundle (
 		id TEXT NOT NULL PRIMARY KEY
 	);
 	"""
 	__tablename__ = "bundle"
-	id = db.Column(db.Text, primary_key=True)
+	id = db_client.Column(db_client.Text, primary_key=True)
 
 	def __repr__(self):
 		return "<Bundle %r>" % self.id
 
-class Token(db.Model):
+class Token(db_client.Model):
 	"""
 	CREATE TABLE token (
 		id TEXT NOT NULL PRIMARY KEY,
@@ -326,14 +320,14 @@ class Token(db.Model):
 	);
 	"""
 	__tablename__ = "token"
-	id = db.Column(db.Text, primary_key=True)
-	user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-	bundle_id = db.Column(db.Text, db.ForeignKey("bundle.id"), nullable=False)
+	id = db_client.Column(db_client.Text, primary_key=True)
+	user_id = db_client.Column(db_client.Integer, db_client.ForeignKey("user.id"), nullable=False)
+	bundle_id = db_client.Column(db_client.Text, db_client.ForeignKey("bundle.id"), nullable=False)
 
 	def __repr__(self):
 		return "<Token %r>" % self.id
 
-class Session(db.Model):
+class Session(db_client.Model):
 	"""
 	CREATE TABLE session (
 		id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -341,9 +335,9 @@ class Session(db.Model):
 	);
 	"""
 	__tablename__ = "session"
-	id = db.Column(db.Integer, primary_key=True)
-	active = db.Column(db.Integer, default=0, nullable=False)
-	users = db.relationship("User", secondary=session_relationship_table, lazy="subquery", backref=db.backref("sessions", lazy=True))
+	id = db_client.Column(db_client.Integer, primary_key=True)
+	active = db_client.Column(db_client.Integer, default=0, nullable=False)
+	users = db_client.relationship("User", secondary=session_relationship_table, lazy="subquery", backref=db_client.backref("sessions", lazy=True))
 
 	def __repr__(self):
 		return "<Session %r>" % self.id
@@ -351,7 +345,7 @@ class Session(db.Model):
 # Do The Thing
 
 if __name__ == "__main__":
-	db.mapper(SessionRelationship, session_relationship_table)
+	db_client.mapper(SessionRelationship, session_relationship_table)
 	api = Api(app)
 	api_root = "/v" + api_version
 	api.add_resource(AllTokenIDs, api_root + "/tokens")
