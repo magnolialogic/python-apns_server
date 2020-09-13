@@ -29,7 +29,7 @@ with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.yaml
 
 # Configure Flask app and set up SQLite DB
 
-app = Flask(__name__)
+app = Flask("APNS server")
 app.config["SQLALCHEMY_DATABASE_URI"] = config["sqlite-path"]
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
