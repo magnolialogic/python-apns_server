@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
+import requests
+import sys
+import yaml
 from apns2.client import APNsClient
 from apns2.credentials import TokenCredentials
 from apns2.payload import Payload, PayloadAlert
 from json import loads
-import requests
-import sys
-import yaml
 
-class PushSession:
+class APNSPushSession:
 	def __init__(self, background=None, title="Title", body="Body", silent=True, badge=0, dev=True, yaml_tokens=False):
 		self.title = title
 		self.body = body
