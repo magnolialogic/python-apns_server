@@ -2,5 +2,5 @@
 api-url: https://apns.example.com/api/v1
 cert-path: /path/to/fullchain.pem
 key-path: /path/to/privkey.pem
-sqlite-path: sqlite:///path/to/sqlite.db
+sqlite-filename: sqlite.db
 ...
