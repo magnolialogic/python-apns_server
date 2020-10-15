@@ -27,17 +27,17 @@ class APNSPushConnection:
 
 		with open("app.yaml") as app_file:
 			try:
-				loaded_app = yaml.safe_load(app_file)
+				app_data = yaml.safe_load(app_file)
 			except yaml.YAMLError:
 				sys.exit(yaml.YAMLError)
 			else:
 				self.config = {
-					"auth-key": loaded_app["auth-key"],
-					"auth-key-filename": loaded_app["auth-key-filename"],
-					"bundle-id": loaded_app["bundle-id"],
-					"cert-filename": loaded_app["cert-filename"],
-					"team-id": loaded_app["team-id"],
-					"api-url": loaded_app["api-url"] + "/tokens/" + loaded_app["bundle-id"]
+					"auth-key": app_data["auth-key"],
+					"auth-key-filename": app_data["auth-key-filename"],
+					"bundle-id": app_data["bundle-id"],
+					"cert-filename": app_data["cert-filename"],
+					"team-id": app_data["team-id"],
+					"api-url": app_data["api-url"] + "/tokens/" + app_data["bundle-id"]
 				}
 
 		self.credentials = TokenCredentials(auth_key_path=self.config["auth-key-filename"], auth_key_id=self.config["auth-key"], team_id=self.config["team-id"])
@@ -52,11 +52,11 @@ class APNSPushConnection:
 		if self.yaml:
 			with open("tokens.yaml") as token_file:
 				try:
-					loaded_tokens = [token for token in list(yaml.safe_load_all(token_file)) if token is not None]
+					tokens = [token for token in list(yaml.safe_load_all(token_file)) if token is not None]
 				except yaml.YAMLError:
 					sys.exit(yaml.YAMLError)
 				else:
-					self.tokens = [target["device-token"] for target in loaded_tokens if target["bundle-id"] == self.config["bundle-id"]]
+					self.tokens = [target["device-token"] for target in tokens if target["bundle-id"] == self.config["bundle-id"]]
 					if len(self.tokens) == 0:
 						sys.exit("Invalid data: no device tokens defined with matching BundleID")
 		else:
