@@ -9,7 +9,7 @@ User=root
 Group=root
 Restart=always
 Environment="FLASK_ENV=development"
-ExecStart=/root/apns/server.py
+ExecStart=/root/apns/apns_server.py
 
 [Install]
 WantedBy=multi-user.target

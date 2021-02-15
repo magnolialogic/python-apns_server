@@ -12,8 +12,8 @@ parser.add_argument("--title", required=False, default="Title", help="Alert titl
 parser.add_argument("--body", required=False, default="Body", help="Alert body text")
 parser.add_argument("--badge", type=int, required=False, default=0, help="Number to set in app icon badge")
 parser.add_argument("--silent", action="store_true", help="Do not play sound")
-# parser.add_argument("--background", type=yaml.safe_load, required=False, help="Deliver quoted dict silently in background") # Pass a custom dictionary as background payload
-parser.add_argument("--background", type=float, required=False, help="Deliver float data silently in the background")
+parser.add_argument("--background", type=yaml.safe_load, required=False, help="Deliver quoted dict silently in background") # Pass a custom dictionary as background payload
+#parser.add_argument("--background", type=int, required=False, help="Deliver Int data silently in the background")
 parser.add_argument("--yaml", action="store_true", help="Use DeviceTokens from tokens.yaml instead of using APNS remote server API")
 args = parser.parse_args()
 

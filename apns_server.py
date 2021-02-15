@@ -30,7 +30,7 @@ with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), "config.yaml
 # Configure Flask app and set up SQLite DB
 
 app = Flask("APNS server")
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite://" + os.path.join(os.path.dirname(os.path.realpath(__file__)), config["sqlite-filename"])
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(os.path.dirname(os.path.realpath(__file__)), config["sqlite-filename"])
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = True
 
 db_client = SQLAlchemy(app)
@@ -46,7 +46,7 @@ session_relationship_table = db_client.Table("session_relationship",
 # Convenience methods
 
 def valid_data(data):
-	expected_keys = ["bundle-id", "device-token", "name"]
+	expected_keys = ["bundle-id", "device-token"]
 	if sorted(expected_keys) == sorted(list(data.keys())):
 		for value in data.values():
 			if value in ["", None]:
@@ -126,7 +126,7 @@ class TokenByID(Resource):
 		token = Token.query.filter_by(id=token_id).first()
 		if token:
 			log_event("GET /token/{token_id} -> 200 Success".format(token_id=token_id))
-			return {"id": token.id, "bundle-id": token.bundle_id, "user": token.user.name, "user-id": token.user_id}, 200
+			return {"id": token.id, "bundle-id": token.bundle_id, "user-id": token.user_id}, 200
 		else:
 			log_event("GET /token/{token_id} -> 404 NotFound".format(token_id=token_id))
 			return "{token_id} not found".format(token_id=token_id), 404
@@ -154,9 +154,7 @@ class UserByID(Resource):
 		user_record = User.query.filter_by(id=user_id).first()
 		if user_record:
 			user = {
-				"admin": str(bool(user_record.admin)),
 				"device-tokens": [token.id for token in user_record.tokens],
-				"name": user_record.name,
 				"user-id": user_record.id
 			}
 			log_event("GET /user/{request} -> 200 Success {result}".format(request=user_id, result=user))
@@ -172,7 +170,6 @@ class UserByID(Resource):
 		parser = reqparse.RequestParser()
 		parser.add_argument("bundle-id", type=str)
 		parser.add_argument("device-token", type=str)
-		parser.add_argument("name", type=str)
 		args = parser.parse_args()
 
 		if valid_data(args):
@@ -181,7 +178,7 @@ class UserByID(Resource):
 				log_event("POST /user/{request} -> 409 AlreadyExists".format(request=user_id))
 				return "User {user_id} already exists".format(user_id=user_id), 409
 			else:
-				db_client.session.add(User(id=user_id, name=args["name"]))
+				db_client.session.add(User(id=user_id))
 				db_client.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
 				db_client.session.commit()
 				log_event("POST /user/{request} -> 201 Created {result}".format(request=user_id, result=args))
@@ -197,13 +194,12 @@ class UserByID(Resource):
 		parser = reqparse.RequestParser()
 		parser.add_argument("bundle-id", type=str)
 		parser.add_argument("device-token", type=str)
-		parser.add_argument("name", type=str)
 		args = parser.parse_args()
 
 		if valid_data(args):
+			print(args)
 			user_record = User.query.filter_by(id=user_id)
 			if user_record.first():
-				user_record.update(dict(name=args["name"]))
 				if args["device-token"] not in [token.id for token in user_record.first().tokens]:
 					db_client.session.add(Token(id=args["device-token"], bundle_id=args["bundle-id"], user_id=user_id))
 				else:
@@ -212,40 +208,13 @@ class UserByID(Resource):
 				log_event("PUT /user/{request} -> 200 Success".format(request=user_id))
 				return "User {user_id} updated".format(user_id=user_id), 200
 			else:
-				db_client.session.add(User(id=user_id, name=args["name"]))
+				db_client.session.add(User(id=user_id))
 				db_client.session.add(Token(id=args["device-token"], user_id=user_id, bundle_id=args["bundle-id"]))
 				db_client.session.commit()
 				log_event("PUT /user/{request} -> 201 Created".format(request=user_id))
 				return "Created user {user_id}".format(user_id=user_id), 201
 		else:
 			log_event("PUT /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=args))
-			return args, 400
-
-	def patch(self, user_id):
-		"""
-		Updates Name for given UserID
-		"""
-		parser = reqparse.RequestParser()
-		parser.add_argument("name", type=str)
-		args = parser.parse_args()
-
-		if args["name"] not in ["", None]:
-			user_record = User.query.filter_by(id=user_id)
-			if user_record.first():
-				if user_record.first().name != args["name"]:
-					user_record.update(dict(name=args["name"]))
-					db_client.session.commit()
-					log_event("PATCH /user/{request} -> 200 Success {result}".format(request=user_id, result=args))
-					return "Updated name for user {user_id}".format(user_id=user_id), 200
-				else:
-					log_event("PATCH /user/{request} -> 304 NotModified {result}".format(request=user_id, result=args))
-					return 304
-			else:
-				log_event("PATCH /user/{request} -> 404 NotFound {result}".format(request=user_id, result=args))
-				return "User {user_id} not found".format(user_id=user_id), 404
-
-		else:
-			log_event("PATCH /user/{request} -> 400 Bad Request {result}".format(request=user_id, result=args))
 			return args, 400
 
 	def delete(self, user_id):
@@ -283,15 +252,11 @@ class SessionRelationship(object):
 class User(db_client.Model):
 	"""
 	CREATE TABLE user (
-		id TEXT PRIMARY KEY,
-		name TEXT NOT NULL,
-		admin INTEGER DEFAULT 0 NOT NULL CHECK(admin >= 0 AND admin <= 1)
+		id TEXT PRIMARY KEY
 	);
 	"""
 	__tablename__ = "user"
 	id = db_client.Column(db_client.Text, primary_key=True)
-	admin = db_client.Column(db_client.Integer, default=0, nullable=False)
-	name = db_client.Column(db_client.Text, nullable=False)
 	tokens = db_client.relationship("Token", backref="user", lazy=True)
 
 	def __repr__(self):
